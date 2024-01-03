@@ -39,7 +39,6 @@ setup(
         "smilesbox",
         'pathos',
         'pandas',
-        'itertools',
         'airsspy',
         'pickle'
     ],
