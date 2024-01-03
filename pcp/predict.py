@@ -1,0 +1,395 @@
+from smilesbox.smilesbox import SMILESbox
+from airsspy import SeedAtoms, Buildcell
+from chgnet.model.model import CHGNet
+from chgnet.model import StructOptimizer
+
+# Import ase assets
+from ase.optimize import BFGSLineSearch, sciopt, FIRE, BFGS, precon
+from ase.calculators.lj import LennardJones
+from ase.constraints import UnitCellFilter, ExpCellFilter
+
+import copy 
+import itertools as it 
+
+from ase.geometry.analysis import Analysis
+import numpy as np 
+import re 
+from tqdm import tqdm
+from datetime import  datetime as dt
+from pymatgen.io.ase import AseAtomsAdaptor
+import pandas as pd 
+from pymatgen.analysis.structure_prediction.volume_predictor import DLSVolumePredictor
+
+import warnings 
+warnings.filterwarnings("ignore", module="pymatgen")
+warnings.filterwarnings("ignore", module="ase")
+
+import pathos.multiprocessing as multiprocessing 
+from pathos.helpers import mp as pmp 
+from pathos.pools import ProcessPool 
+from pathos.pp import ParallelPool 
+from pathos.serial import SerialPool
+import math
+
+
+class PredictStructure:
+    def __init__(self,
+                 boxsize=10,
+                 init_sep_val=0.5,
+                 num_units=1,
+                 units=True,
+                 min_sep = 0.5,
+                 max_failures = 10,
+                 nprocs=2,
+                 use_device='cpu'):
+        
+        self.boxsize = boxsize
+        self.init_sep_val = init_sep_val
+        self.num_units = num_units
+        self.min_sep = float(min_sep)
+        self.units = units
+        self.data = {}
+        self.max_failures = max_failures
+        self.energies = []
+        self.max_forces = []
+        self.convergence = []
+        self.nprocs = nprocs
+        self.use_device = use_device # cpu, cuda, mps
+
+    def show(self,seed):
+        from pyxtal import pyxtal
+        cryst = pyxtal()
+        AseAtomsAdaptor.get_structure(seed)
+        cryst._from_pymatgen(AseAtomsAdaptor.get_structure(seed))
+        return(cryst)
+    
+    def create_initial_seed(self,smileses=None,dls=True,**kws):
+        '''
+        need a better way of doing the box size as it makes the airss configurations more sensitive
+        '''
+
+        molecular_units = []
+        for mol in smileses:
+            sb = SMILESbox()
+            sb.smiles_to_atoms(mol)
+            if not self.boxsize == None:
+                sb.add_box([self.boxsize,self.boxsize,self.boxsize])
+            molecule = sb.atoms
+            molecular_units.append(molecule)
+        self.molecular_units = molecular_units
+        initial_seed = copy.deepcopy(molecular_units)
+        for i,j in enumerate(initial_seed):
+            if not i == 0:
+                initial_seed[0]+=j
+        if dls == True and not self.boxsize==None:
+            self.initial_seed = AseAtomsAdaptor().get_atoms(
+                DLSVolumePredictor(
+                    cutoff=self.boxsize+5,**kws).get_predicted_structure(
+                        AseAtomsAdaptor().get_structure(initial_seed[0])
+            ))
+            self.seed = copy.deepcopy(self.initial_seed)
+
+
+        else:
+            self.initial_seed = initial_seed[0]
+            self.seed = copy.deepcopy(self.initial_seed)
+
+
+
+
+    def create_initial_separations(self):
+        ''' this is to be run before you start any simulations
+        as we superimpose the molecules on each other in the cell this can give us strange intermolecular distances so we estimate
+        '''
+        elems = []
+        for x in self.molecular_units:
+            elems.append(
+                list(
+                    dict.fromkeys(x.get_chemical_symbols())
+                    )
+                    )
+        self.elems = elems
+        # for the elements within a molecule we can easily define this
+        dict_of_separations = {}
+        for i,elem_list in enumerate(elems):
+            combinations = list(it.combinations_with_replacement(elem_list,2))
+            analysis = Analysis(self.molecular_units[i])
+            for combination in combinations:
+                a1,a2 = combination
+                try:
+                    dict_of_separations['{}-{}'.format(a1,a2)] = np.min(
+                        analysis.get_values(
+                            analysis.get_bonds(a1,a2,unique=True)
+                            )
+                            )
+
+                except:
+                    if a1 == a2:
+                        dict_of_separations['{}-{}'.format(a1,a2)]  = self.min_sep*2
+                    else:
+                        dict_of_separations['{}-{}'.format(a1,a2)]  = self.min_sep
+
+        missing = it.chain.from_iterable(elems)
+        combinations = list(it.combinations_with_replacement(missing,2))
+        existing = list(dict_of_separations)
+        for combination in combinations:
+            a1,a2 = combination
+            if not '{}-{}'.format(a1,a2) in existing:
+                dict_of_separations['{}-{}'.format(a1,a2)] = self.init_sep_val
+        
+        self.dict_of_separations = {k:v for k,v in dict_of_separations.items() if not v == None}
+
+    def create_initial_separations_from_seed(self,seed): # this needs changing
+        '''seed must be Atoms object'''
+        
+        self.elems = list(
+            dict.fromkeys(seed.get_chemical_symbols())
+            )
+        dict_of_separations = {}
+        combinations = list(it.combinations_with_replacement(self.elems,2))
+        analysis = Analysis(seed)
+        for combination in combinations:
+            a1,a2 = combination
+            try:
+                dict_of_separations['{}-{}'.format(a1,a2)] = np.min(
+                    analysis.get_values(
+                        analysis.get_bonds(a1,a2,unique=True)
+                        )
+                        )
+
+            except:
+                dict_of_separations['{}-{}'.format(a1,a2)]  = self.min_sep
+        self.dict_of_separations = {k:v for k,v in dict_of_separations.items() if not v == None}
+
+    def generate_airss_input(self,
+                             targvol = None,
+                             system = None,
+                             ): # add some more
+        '''
+        this generates a SeedAtoms atoms object which can then be used to generate random configurations
+        '''
+
+        self.seed = SeedAtoms(self.seed)
+        self.seed.gentags.minsep = [self.min_sep,self.dict_of_separations]
+        self.seed.gentags.targvol = targvol
+        self.seed.gentags.system = system
+        # need to add more gentags
+
+        # for now this is highly specialised towards my own system:
+        for i,mol in enumerate(self.molecular_units):
+            elems = list(
+                dict.fromkeys(mol.get_chemical_symbols())
+                )
+            for x in self.seed:
+                elem = re.split('(\d+)', x.tagname)
+                if any(y for y in elem if y in elems):
+                    if self.units == True:
+                        x.tagname = '{}-mol'.format(i+1)
+                    x.num = self.num_units
+
+        self.airrs_input_file = '\n'.join(self.seed.get_cell_inp_lines()) # incase you need an input file
+
+    def generate_random_cells(self,num_cells,**kws):
+        try:
+            random_cells = [self.seed.build_random_atoms(**kws) for x in tqdm(range(num_cells),desc='gen cells',leave=False)]
+        except:
+            random_cells = None
+            print('unable to build random atoms from seed')
+        return(random_cells)
+
+    def gen_and_relax_serial(self,random_cell,relaxer,dls=False,**kws):
+        result = relaxer.relax(random_cell,**kws)
+        fmax = np.max(
+            [np.linalg.norm(x) for x in result['trajectory'].forces[-1]]
+            )
+        final_energy = result['trajectory'].energies[-1]
+        final_structure = result['final_structure']
+        return({
+            'final_structure':final_structure,
+            'final_energy':final_energy,
+            'max_force':fmax
+        })
+    
+    def gen_and_relax_mp(self,chunk,relaxer,out_q=None):
+        _data = {}
+        for i,c in enumerate(chunk):
+            try:
+                result = relaxer.relax(c,verbose=False)
+                fmax = np.max(
+                    [np.linalg.norm(x) for x in result['trajectory'].forces[-1]]
+                    )
+                final_energy = result['trajectory'].energies[-1]
+                final_structure = result['final_structure']
+                _data[i] = {
+                'final_structure':final_structure,
+                'final_energy':final_energy,
+                'max_force':fmax}
+            except:
+                pass
+        out_q.put(_data)
+
+    def _mp_function(self,random_cells,relaxer,dls=False):
+        data_chunks = [random_cells[chunksize*i:chunksize*(i+1)]
+                            for i in range(self.nprocs)
+                            for chunksize in [int(math.ceil(len(random_cells)/float(self.nprocs)))]]
+        
+        
+        manager = pmp.Manager()
+        out_queue = manager.Queue()
+        run = 0        
+        data = {}
+        jobs = []
+        for i,chunk in enumerate(data_chunks):
+            process = pmp.Process(target=self.gen_and_relax_mp,
+                                  args=(chunk,relaxer,out_queue))
+            jobs.append(process)
+            process.start()
+
+        for proc in jobs:
+            data.update(out_queue.get())
+        
+        for proc in jobs:
+            proc.terminate()
+
+        for proc in jobs:
+            proc.join()
+        return(data)
+        
+    
+    @staticmethod
+    def check_convergence(points,n_points,energy_convergence):
+        '''checks if the gradient of the line is under convergence criterion'''
+
+        points_considered = list(reversed(points))[0:n_points]
+        xrange = range(len(points_considered))
+        a, b = np.polyfit(xrange, points_considered, 1)
+
+        if abs(a) <= energy_convergence:
+            if points_considered[-1] == np.min(points):
+                return(1,abs(a))
+            else:
+                return(0,abs(a))
+        else:
+            return(0,abs(a))
+        
+        
+    def run_seeds(self,
+                  num_seeds=100,
+                  optimizer_class='FIRE',
+                  energy_convergence=0.1,
+                  num_points_to_converge=3,
+                  dir='.',
+                  dls=False,
+                  **kws):
+        
+        chgnetrelaxer = StructOptimizer(optimizer_class=optimizer_class,use_device=self.use_device)
+        #initially
+        self.energy_convergence = energy_convergence
+        self.create_initial_separations() # needs kws
+        self.generate_airss_input() # needs more options
+        random_atoms = self.generate_random_cells(num_cells=num_seeds) # add kws
+        
+        run = 0
+        if self.nprocs > 1:
+            print('run-{}'.format(run),end=' ')
+            start = dt.now()
+            data = self._mp_function(random_atoms,chgnetrelaxer,dls=dls)
+            end = dt.now()
+            total = end - start
+        else:
+            data = {}
+            start = dt.now()
+            for i,random_cell in tqdm(enumerate(random_atoms),total=num_seeds,desc='run-{}'.format(run)):
+                data[i] = self.gen_and_relax_serial(random_cell,chgnetrelaxer,dls=dls,**kws)
+            end = dt.now()
+            total = end - start
+        df = pd.DataFrame(data).T.sort_values(by='final_energy',ascending=True)
+        df.reset_index(inplace=True)
+
+        self.data[run] = copy.deepcopy(df)
+        self.energies.append(df.T[0]['final_energy'])
+        self.max_forces.append(df.T[0]['max_force'])
+        self.seed = AseAtomsAdaptor().get_atoms(df.T[0]['final_structure'])
+        self.seed.write('{}/run_{}.vasp'.format(dir,run))
+    
+        print('energy: {:.2F},fmax: {:.2F},time: {}s'.format(
+            self.energies[-1],
+            self.max_forces[-1],
+            total.total_seconds()
+            )
+            )
+
+        #now to converge the energies by looping airss
+        convergence = 0
+        while convergence == 0: # perhaps this should be a function
+            run+=1
+            data = {}
+            self.create_initial_separations_from_seed(self.seed)
+            self.num_units = 1 # to avoid exponentially increasing the structure
+            self.generate_airss_input() # need to have some kws
+            random_atoms = self.generate_random_cells(num_cells=num_seeds) # add kws
+            if random_atoms == None:
+                self.create_initial_separations()
+                self.generate_airss_input()
+                random_atoms = self.generate_random_cells(num_cells=num_seeds)
+
+            if self.nprocs > 1:
+                print('run-{}'.format(run),end=' ')
+                start = dt.now()
+                data = self._mp_function(random_atoms,chgnetrelaxer,dls=dls)
+                end = dt.now()
+                total = end - start
+            else:
+                start = dt.now()
+                for i,random_cell in tqdm(enumerate(random_atoms),total=num_seeds,desc='run-{}'.format(run)):
+                    data[i] = self.gen_and_relax_serial(random_cell,chgnetrelaxer,dls=dls,**kws)
+                end = dt.now()
+                total = end - start
+            df = pd.DataFrame(data).T.sort_values(by='final_energy',ascending=True)
+            df.reset_index(inplace=True)
+
+            self.data[run] = copy.deepcopy(df)
+
+            if df.T[0]['final_energy'] <= np.min(self.energies):
+                self.seed = AseAtomsAdaptor().get_atoms(df.T[0]['final_structure']) 
+                self.seed.write('{}/run_{}.vasp'.format(dir,run))
+            else:
+                self.seed = AseAtomsAdaptor().get_atoms(df.T[0]['final_structure']) 
+                self.seed.write('{}/run_{}.vasp'.format(dir,run))
+                self.seed = AseAtomsAdaptor().get_atoms(self.data[np.argmin(self.energies)].T[0]['final_structure'])
+                print('warning: lower energy seed was found previously - restarting from that')
+                
+            self.energies.append(df.T[0]['final_energy'])
+            self.max_forces.append(df.T[0]['max_force'])
+            
+            if run >= num_points_to_converge:
+
+                convergence,absey = self.check_convergence(points=self.energies,
+                                                           n_points=num_points_to_converge,
+                                                           energy_convergence=energy_convergence)
+                
+                self.convergence.append(absey)
+                
+                print('energy:{:.2F}, convergence:{:.2F}, fmax:{:.2F},time:{}s'.format(self.energies[-1],absey,self.max_forces[-1],total.total_seconds()))
+            else:
+                self.convergence.append(None)
+                print('energy:{:.2F}, fmax:{:.2F},time:{}s'.format(self.energies[-1],self.max_forces[-1],total.total_seconds()))
+
+    def plot_trajectory(self):
+        import matplotlib.pyplot as plt 
+        fig,(ax1,ax2,ax3) = plt.subplots(ncols=3,figsize=(18,6),dpi=100)
+        pd.Series(self.max_forces).plot.line(ax=ax1,color='tab:blue')
+        pd.Series(self.energies).plot.line(ax=ax2,color='tab:green')
+        pd.Series(self.convergence).plot.line(ax=ax3,color='tab:red')
+        ax3.axhline(self.energy_convergence,linestyle='--',color='black')
+        ax3.set_xlim(0)
+        ax1.set_title('max force')
+        ax2.set_title('total energy')
+        ax3.set_title('convergence')
+
+        ax1.set_ylabel('max force (eV $\\AA^{-1}$)')
+        ax2.set_ylabel('energy (eV)')
+        ax3.set_ylabel('convergence (arb.units)')
+        [ax.set_xlabel('run') for ax in [ax1,ax2,ax3]]
+        plt.tight_layout()
+        plt.show()    
