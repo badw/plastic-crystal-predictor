@@ -1,5 +1,5 @@
 from pcp.predict import PredictStructure
-import datetime as dt 
+from datetime import datetime as dt 
 import pickle
 
 def main():
@@ -7,19 +7,19 @@ def main():
             num_units=1,
             units=True,
             boxsize=10,
-            nprocs=2)
+            nprocs=32)
     
-    ps.create_initial_seed(smileses=['CCC[N+](CCC)(CCC)CCC','Cl[Fe-](Cl)(Cl)Cl'],
+    ps.create_initial_seed(smileses=['C[N+](C)CCCC','Cl[Fe-](Cl)(Cl)Cl'],
                            dls = True,
                            **{'min_scaling':0.1,'max_scaling':0.4})
-    ps.initial_seed.write('testing/init.vasp')
+    ps.initial_seed.write('runs/init.vasp')
     start = dt.now()
-    ps.run_seeds(num_seeds=100,
+    ps.run_seeds(num_seeds=32,
                  convergence=0.1,
                  optimizer_class='FIRE',
-                 dir='./testing',
+                 dir='./runs',
                  num_points_to_converge=3,
-                 **{'verbose':True,'steps':200})
+                 **{'steps':50})
     
     end= dt.now()
     total = end - start
