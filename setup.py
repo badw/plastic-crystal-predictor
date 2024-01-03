@@ -40,7 +40,6 @@ setup(
         'pathos',
         'pandas',
         'airsspy',
-        'pickle'
     ],
     #entry_points={
     #    "console_scripts":[
