@@ -32,6 +32,7 @@ setup(
     python_requires=">=3.8",
     install_requires=[
         "chgnet",
+        "pyxtal",
         "pymatgen",
         "ase",
         "numpy",
