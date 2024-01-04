@@ -10,10 +10,11 @@ from ase.constraints import UnitCellFilter, ExpCellFilter
 
 import copy 
 import itertools as it 
+from monty.serialization import loadfn,dumpfn
 
 from ase.geometry.analysis import Analysis
 import numpy as np 
-import re 
+import re, os, sys
 from tqdm import tqdm
 from datetime import  datetime as dt
 from pymatgen.io.ase import AseAtomsAdaptor
@@ -55,6 +56,7 @@ class PredictStructure:
         self.convergence = []
         self.nprocs = nprocs
         self.use_device = use_device # cpu, cuda, mps
+        
 
     def show(self,seed):
         from pyxtal import pyxtal
@@ -93,9 +95,6 @@ class PredictStructure:
         else:
             self.initial_seed = initial_seed[0]
             self.seed = copy.deepcopy(self.initial_seed)
-
-
-
 
     def create_initial_separations(self):
         ''' this is to be run before you start any simulations
@@ -198,6 +197,7 @@ class PredictStructure:
         return(random_cells)
 
     def gen_and_relax_serial(self,random_cell,relaxer,dls=False,**kws):
+        '''not updated'''
         result = relaxer.relax(random_cell,**kws)
         fmax = np.max(
             [np.linalg.norm(x) for x in result['trajectory'].forces[-1]]
@@ -209,26 +209,36 @@ class PredictStructure:
             'final_energy':final_energy,
             'max_force':fmax
         })
-    
-    def gen_and_relax_mp(self,chunk,relaxer,out_q=None):
+    def gen_and_relax_mp(self,i_chunk,chunk,relaxer,directory,out_q=None):
         _data = {}
         for i,c in enumerate(chunk):
+            destination = os.path.join(directory,'structure-{}'.format(i_chunk+i))
             try:
-                result = relaxer.relax(c,verbose=False)
+                os.mkdir(destination)
+            except:
+                pass
+            try:
+                sys.stdout = open(os.path.join(destination,'out.log'),'w') #logging the output 
+                c.to(filename='{}/input.vasp'.format(destination),fmt='poscar')
+                result = relaxer.relax(c,verbose=True)
                 fmax = np.max(
                     [np.linalg.norm(x) for x in result['trajectory'].forces[-1]]
                     )
                 final_energy = result['trajectory'].energies[-1]
                 final_structure = result['final_structure']
+                final_structure.to(filename='{}/output.vasp'.format(destination),fmt='poscar')
                 _data[i] = {
-                'final_structure':final_structure,
-                'final_energy':final_energy,
-                'max_force':fmax}
+                    'init_structure':c,
+                    'final_structure':final_structure,
+                    'final_energy':final_energy,
+                    'max_force':fmax}
+                dumpfn(_data[i],'{}/data.log'.format(destination))
             except:
                 pass
         out_q.put(_data)
 
-    def _mp_function(self,random_cells,relaxer,dls=False):
+    def _mp_function(self,run_num,random_cells,relaxer,dls=False):
+
         data_chunks = [random_cells[chunksize*i:chunksize*(i+1)]
                             for i in range(self.nprocs)
                             for chunksize in [int(math.ceil(len(random_cells)/float(self.nprocs)))]]
@@ -236,12 +246,13 @@ class PredictStructure:
         
         manager = pmp.Manager()
         out_queue = manager.Queue()
-        run = 0        
+        #run = 0        
         data = {}
         jobs = []
+        directory = os.path.join('runs','run_{}'.format(run_num))
         for i,chunk in enumerate(data_chunks):
             process = pmp.Process(target=self.gen_and_relax_mp,
-                                  args=(chunk,relaxer,out_queue))
+                                  args=(i,chunk,relaxer,directory,out_queue))
             jobs.append(process)
             process.start()
 
@@ -293,7 +304,7 @@ class PredictStructure:
         if self.nprocs > 1:
             print('run-{}'.format(run),end=' ')
             start = dt.now()
-            data = self._mp_function(random_atoms,chgnetrelaxer,dls=dls)
+            data = self._mp_function(run,random_atoms,chgnetrelaxer,dls=dls)
             end = dt.now()
             total = end - start
         else:
@@ -336,7 +347,7 @@ class PredictStructure:
             if self.nprocs > 1:
                 print('run-{}'.format(run),end=' ')
                 start = dt.now()
-                data = self._mp_function(random_atoms,chgnetrelaxer,dls=dls)
+                data = self._mp_function(run,random_atoms,chgnetrelaxer,dls=dls)
                 end = dt.now()
                 total = end - start
             else:
