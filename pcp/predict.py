@@ -227,12 +227,13 @@ class PredictStructure:
                     )
                 final_energy = result['trajectory'].energies[-1]
                 final_structure = result['final_structure']
-                final_structure.to(filename='{}/output.vasp'.format(destination),fmt='poscar',sorted=True)
+                final_structure.to(filename='{}/output.vasp'.format(destination),fmt='poscar')
                 _data[i] = {
                     'init_structure':c,
                     'final_structure':final_structure,
                     'final_energy':final_energy,
                     'max_force':fmax}
+                print(_data[i])
                 dumpfn(_data[i],'{}/data.json'.format(destination),indent=2)
             except:
                 pass
