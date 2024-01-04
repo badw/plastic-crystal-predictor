@@ -1,0 +1,25 @@
+Metadata-Version: 2.1
+Name: plastic-crystal-predictor
+Version: 0.1
+Summary: Plastic-Crystal-Predictor
+Home-page: https://github.com/badw/plastic-crystal-predictor
+Author: Benjamin A. D. Williamson
+Author-email: benjamin.williamson@ntnu.no
+License: MIT
+Keywords: chemistry ase vasp structure
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Natural Language :: English
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Topic :: Scientific/Engineering :: Chemistry
+Classifier: Topic :: Scientific/Engineering :: Physics
+Requires-Python: >=3.8
+
+# plastic-crystal-predictor
+Uses chgnet (https://github.com/CederGroupHub/chgnet) and airsspy (https://github.com/zhubonan/airsspy) to roughly predict new plastic crystal compositions before running DFT
+
+work in progress
+still a bit rough... 
+

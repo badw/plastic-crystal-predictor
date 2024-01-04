@@ -7,6 +7,7 @@ from chgnet.model import StructOptimizer
 from ase.optimize import BFGSLineSearch, sciopt, FIRE, BFGS, precon
 from ase.calculators.lj import LennardJones
 from ase.constraints import UnitCellFilter, ExpCellFilter
+from ase.io import read,write
 
 import copy 
 import itertools as it 
@@ -14,7 +15,7 @@ from monty.serialization import loadfn,dumpfn
 
 from ase.geometry.analysis import Analysis
 import numpy as np 
-import re, os, sys
+import re, os, sys,io 
 from tqdm import tqdm
 from datetime import  datetime as dt
 from pymatgen.io.ase import AseAtomsAdaptor
@@ -209,17 +210,17 @@ class PredictStructure:
             'final_energy':final_energy,
             'max_force':fmax
         })
+    
     def gen_and_relax_mp(self,i_chunk,chunk,relaxer,directory,out_q=None):
         _data = {}
         for i,c in enumerate(chunk):
-            destination = os.path.join(directory,'structure-{}'.format(i_chunk+i))
+            #i+=1
+            destination = os.path.join('.',directory,'structure-{}'.format(i_chunk+i+len(chunk)*i_chunk))
+            os.makedirs(destination,exist_ok=True)
             try:
-                os.mkdir(destination)
-            except:
-                pass
-            try:
-                sys.stdout = open(os.path.join(destination,'out.log'),'w') #logging the output 
-                c.to(filename='{}/input.vasp'.format(destination),fmt='poscar')
+                write('{}/input.vasp'.format(destination),c,vasp5=True)
+                #logfile = open(sys.stdout.fileno(),'wb',0)
+                sys.stdout = io.TextIOWrapper(open(os.path.join(destination,'out.log'),'wb',0),write_through=True) #logging the output 
                 result = relaxer.relax(c,verbose=True)
                 fmax = np.max(
                     [np.linalg.norm(x) for x in result['trajectory'].forces[-1]]
@@ -238,6 +239,7 @@ class PredictStructure:
         out_q.put(_data)
 
     def _mp_function(self,run_num,random_cells,relaxer,dls=False):
+        '''this is the multiprocessing function'''
 
         data_chunks = [random_cells[chunksize*i:chunksize*(i+1)]
                             for i in range(self.nprocs)

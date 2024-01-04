@@ -7,14 +7,14 @@ def main():
             num_units=1,
             units=True,
             boxsize=10,
-            nprocs=32)
+            nprocs=2)
     
     ps.create_initial_seed(smileses=['C[N+](C)(C)(C)','Cl[Fe-](Cl)(Cl)Cl'],
                            dls = True,
                            **{'min_scaling':0.1,'max_scaling':0.4})
     ps.initial_seed.write('runs/init.vasp')
     start = dt.now()
-    ps.run_seeds(num_seeds=320,
+    ps.run_seeds(num_seeds=32,
                  convergence=0.1,
                  optimizer_class='FIRE',
                  dir='./runs',

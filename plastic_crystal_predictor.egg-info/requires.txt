@@ -1,0 +1,9 @@
+chgnet
+pyxtal
+pymatgen
+ase
+numpy
+smilesbox
+pathos
+pandas
+airsspy

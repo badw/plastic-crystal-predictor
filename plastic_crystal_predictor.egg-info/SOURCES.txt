@@ -1,0 +1,7 @@
+README.md
+setup.py
+plastic_crystal_predictor.egg-info/PKG-INFO
+plastic_crystal_predictor.egg-info/SOURCES.txt
+plastic_crystal_predictor.egg-info/dependency_links.txt
+plastic_crystal_predictor.egg-info/requires.txt
+plastic_crystal_predictor.egg-info/top_level.txt
