@@ -227,7 +227,8 @@ class PredictStructure:
                     )
                 final_energy = result['trajectory'].energies[-1]
                 final_structure = result['final_structure']
-                final_structure.to(filename='{}/output.vasp'.format(destination),fmt='poscar',sorted=True)
+                final_structure.sort()
+                final_structure.to(filename='{}/output.vasp'.format(destination),fmt='poscar')
                 _data[i] = {
                     'init_structure':c,
                     'final_structure':final_structure,
