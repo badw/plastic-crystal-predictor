@@ -218,7 +218,7 @@ class PredictStructure:
             destination = os.path.join('.',directory,'structure-{}'.format(i_chunk+i+len(chunk)*i_chunk))
             os.makedirs(destination,exist_ok=True)
             try:
-                write('{}/input.vasp'.format(destination),c,vasp5=True)
+                write('{}/input.vasp'.format(destination),c,vasp5=True,sort=True)
                 #logfile = open(sys.stdout.fileno(),'wb',0)
                 sys.stdout = io.TextIOWrapper(open(os.path.join(destination,'out.log'),'wb',0),write_through=True) #logging the output 
                 result = relaxer.relax(c,verbose=True)
@@ -227,7 +227,7 @@ class PredictStructure:
                     )
                 final_energy = result['trajectory'].energies[-1]
                 final_structure = result['final_structure']
-                final_structure.to(filename='{}/output.vasp'.format(destination),fmt='poscar')
+                final_structure.to(filename='{}/output.vasp'.format(destination),fmt='poscar',sorted=True)
                 _data[i] = {
                     'init_structure':c,
                     'final_structure':final_structure,
