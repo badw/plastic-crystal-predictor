@@ -211,7 +211,7 @@ class PredictStructure:
             'max_force':fmax
         })
     
-    def gen_and_relax_mp(self,i_chunk,chunk,relaxer,directory,out_q=None):
+    def gen_and_relax_mp(self,i_chunk,chunk,relaxer,directory,steps,out_q=None):
         _data = {}
         for i,c in enumerate(chunk):
             #i+=1
@@ -221,7 +221,7 @@ class PredictStructure:
                 write('{}/input.vasp'.format(destination),c,vasp5=True,sort=True)
                 #logfile = open(sys.stdout.fileno(),'wb',0)
                 sys.stdout = io.TextIOWrapper(open(os.path.join(destination,'out.log'),'wb',0),write_through=True) #logging the output 
-                result = relaxer.relax(c,verbose=True)
+                result = relaxer.relax(c,steps=steps,verbose=True)
                 fmax = np.max(
                     [np.linalg.norm(x) for x in result['trajectory'].forces[-1]]
                     )
@@ -238,7 +238,7 @@ class PredictStructure:
                 pass
         out_q.put(_data)
 
-    def _mp_function(self,run_num,random_cells,relaxer,dls=False):
+    def _mp_function(self,run_num,random_cells,relaxer,steps,dls=False,):
         '''this is the multiprocessing function'''
 
         data_chunks = [random_cells[chunksize*i:chunksize*(i+1)]
@@ -254,7 +254,7 @@ class PredictStructure:
         directory = os.path.join('runs','run_{}'.format(run_num))
         for i,chunk in enumerate(data_chunks):
             process = pmp.Process(target=self.gen_and_relax_mp,
-                                  args=(i,chunk,relaxer,directory,out_queue))
+                                  args=(i,chunk,relaxer,directory,steps,out_queue))
             jobs.append(process)
             process.start()
 
@@ -293,6 +293,7 @@ class PredictStructure:
                   num_points_to_converge=3,
                   dir='.',
                   dls=False,
+                  steps=100,
                   **kws):
         
         chgnetrelaxer = StructOptimizer(optimizer_class=optimizer_class,use_device=self.use_device)
@@ -306,7 +307,7 @@ class PredictStructure:
         if self.nprocs > 1:
             print('run-{}'.format(run),end=' ')
             start = dt.now()
-            data = self._mp_function(run,random_atoms,chgnetrelaxer,dls=dls)
+            data = self._mp_function(run,random_atoms,chgnetrelaxer,steps=steps,dls=dls,)
             end = dt.now()
             total = end - start
         else:
@@ -349,7 +350,7 @@ class PredictStructure:
             if self.nprocs > 1:
                 print('run-{}'.format(run),end=' ')
                 start = dt.now()
-                data = self._mp_function(run,random_atoms,chgnetrelaxer,dls=dls)
+                data = self._mp_function(run,random_atoms,chgnetrelaxer,steps=steps,dls=dls)
                 end = dt.now()
                 total = end - start
             else:
