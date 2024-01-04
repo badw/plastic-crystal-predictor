@@ -233,7 +233,7 @@ class PredictStructure:
                     'final_structure':final_structure,
                     'final_energy':final_energy,
                     'max_force':fmax}
-                dumpfn(_data[i],'{}/data.log'.format(destination))
+                dumpfn(_data[i],'{}/data.json'.format(destination),indent=2)
             except:
                 pass
         out_q.put(_data)
