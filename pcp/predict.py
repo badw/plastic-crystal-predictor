@@ -197,7 +197,7 @@ class PredictStructure:
             random_cells = [self.seed.build_random_atoms(**kws) for x in tqdm(range(num_cells),
                                                                               desc='Building Randomised Cells',
                                                                               leave=True,
-                                                                              bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')]
+                                                                              bar_format='{l_bar}{bar:10}{r_bar}')]
         except:
             random_cells = None
             print(' -> unable to build random atoms from seed.')
