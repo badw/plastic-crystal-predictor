@@ -195,7 +195,7 @@ class PredictStructure:
 
         try:
             random_cells = [self.seed.build_random_atoms(**kws) for x in tqdm(range(num_cells),
-                                                                              desc='Building Randomised Cells:',
+                                                                              desc='Building Randomised Cells',
                                                                               leave=True,
                                                                               bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')]
         except:
@@ -315,7 +315,7 @@ class PredictStructure:
         self.seed = AseAtomsAdaptor().get_atoms(df.T[0]['final_structure'])
         self.seed.write('{}/run_{}.vasp'.format(dir,run))
 
-        print('''   -> victor: structure-{}, 
+        print('''   -> victor:  structure-{}, 
               energy: {:.2F},
               fmax: {:.2F},
               time: {}s'''.format(
@@ -330,6 +330,8 @@ class PredictStructure:
         convergence = 0
         while convergence == 0: # perhaps this should be a function
             run+=1
+            print('\nGeneration {}:'.format(run),end=' ')
+
             data = {}
             self.create_initial_separations_from_seed(self.seed)
             self.num_units = 1 # to avoid exponentially increasing the structure
@@ -340,7 +342,6 @@ class PredictStructure:
                 self.generate_airss_input()
                 random_atoms = self.generate_random_cells(num_cells=num_seeds)
 
-            print('\nGeneration {}:'.format(run),end=' ')
             start = dt.now()
             data = self._mp_function(run,random_atoms,chgnetrelaxer,steps=steps,dls=dls)
             total = dt.now() - start
@@ -369,11 +370,32 @@ class PredictStructure:
                                                            energy_convergence=energy_convergence)
                 
                 self.convergence.append(absey)
+
+                print('''   -> victor:  structure-{}, 
+                      energy: {:.2F},
+                      convergence:{:.2F} 
+                      fmax: {:.2F},
+                      time: {:.2F}s'''.format(
+                          self.data[run].T[0]['index'],
+                          self.energies[-1],
+                          absey,
+                          self.max_forces[-1],
+                          total.total_seconds()
+                          )
+                          )
                 
-                print('energy:{:.2F}, convergence:{:.2F}, fmax:{:.2F},time:{}s'.format(self.energies[-1],absey,self.max_forces[-1],total.total_seconds()))
             else:
                 self.convergence.append(None)
-                print('energy:{:.2F}, fmax:{:.2F},time:{}s'.format(self.energies[-1],self.max_forces[-1],total.total_seconds()))
+                print('''   -> victor:  structure-{}, 
+                      energy: {:.2F},
+                      fmax: {:.2F},
+                      time: {:.2F}s'''.format(
+                          self.data[run].T[0]['index'],
+                          self.energies[-1],
+                          self.max_forces[-1],
+                          total.total_seconds()
+                          )
+                          )
 
     def plot_trajectory(self):
         import matplotlib.pyplot as plt 
