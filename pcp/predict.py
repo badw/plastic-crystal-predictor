@@ -295,19 +295,16 @@ class PredictStructure:
         self.energy_convergence = energy_convergence
         self.create_initial_separations() # needs kws
         self.generate_airss_input() # needs more options
+        print('\nGeneration {}:'.format(run),end=' ')
         random_atoms = self.generate_random_cells(num_cells=num_seeds) # add kws
         
         run = 0
-        print('\nGeneration {}:'.format(run),end=' ')
         start = dt.now()
         data = self._mp_function(run,random_atoms,chgnetrelaxer,steps=steps,dls=dls,)
         total = dt.now() - start
         
 
         df = pd.DataFrame(data).T.sort_values(by='final_energy',ascending=True)
-        dfdict = df.to_dict()
-        dumpfn(dfdict,'test.json')
-        
         df.reset_index(inplace=True)
 
         self.data[run] = copy.deepcopy(df)
@@ -315,16 +312,17 @@ class PredictStructure:
         self.max_forces.append(df.T[0]['max_force'])
         self.seed = AseAtomsAdaptor().get_atoms(df.T[0]['final_structure'])
         self.seed.write('{}/run_{}.vasp'.format(dir,run))
-        # this doesn't seem to work...
-        dfdict = df.to_dict()
-        dumpfn(dfdict,'test.json')
 
-        print('energy: {:.2F},fmax: {:.2F},time: {}s'.format(
-            self.energies[-1],
-            self.max_forces[-1],
-            total.total_seconds()
-            )
-            )
+        print('''   -> victor: structure-{}, 
+              energy: {:.2F},
+              fmax: {:.2F},
+              time: {}s'''.format(
+                  self.data[run].T[0]['index'],
+                  self.energies[-1],
+                  self.max_forces[-1],
+                  total.total_seconds()
+                  )
+                  )
 
         #now to converge the energies by looping airss
         convergence = 0
