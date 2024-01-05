@@ -234,7 +234,6 @@ class PredictStructure:
                 final_structure.sort()
                 final_structure.to(filename='{}/output.vasp'.format(destination),fmt='poscar')
                 _data[i] = {
-                    'init_structure':c,
                     'final_structure':final_structure,
                     'final_energy':final_energy,
                     'max_force':fmax}
@@ -331,7 +330,8 @@ class PredictStructure:
         self.seed = AseAtomsAdaptor().get_atoms(df.T[0]['final_structure'])
         self.seed.write('{}/run_{}.vasp'.format(dir,run))
         # this doesn't seem to work...
-        df.to_pickle('testdf.p')
+        dfdict = df.to_dict()
+        dumpfn('test.json',dfdict)
         print('energy: {:.2F},fmax: {:.2F},time: {}s'.format(
             self.energies[-1],
             self.max_forces[-1],
