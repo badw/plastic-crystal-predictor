@@ -192,26 +192,30 @@ class PredictStructure:
         self.airrs_input_file = '\n'.join(self.seed.get_cell_inp_lines()) # incase you need an input file
 
     def generate_random_cells(self,num_cells,**kws):
+
         try:
-            random_cells = [self.seed.build_random_atoms(**kws) for x in tqdm(range(num_cells),desc='gen cells',leave=False)]
+            random_cells = [self.seed.build_random_atoms(**kws) for x in tqdm(range(num_cells),
+                                                                              desc='Building Randomised Cells:',
+                                                                              leave=True,
+                                                                              bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')]
         except:
             random_cells = None
-            print('unable to build random atoms from seed')
+            print(' -> unable to build random atoms from seed.')
         return(random_cells)
 
-    def gen_and_relax_serial(self,random_cell,relaxer,dls=False,**kws):
-        '''not updated'''
-        result = relaxer.relax(random_cell,**kws)
-        fmax = np.max(
-            [np.linalg.norm(x) for x in result['trajectory'].forces[-1]]
-            )
-        final_energy = result['trajectory'].energies[-1]
-        final_structure = result['final_structure']
-        return({
-            'final_structure':final_structure,
-            'final_energy':final_energy,
-            'max_force':fmax
-        })
+    #def gen_and_relax_serial(self,random_cell,relaxer,dls=False,**kws):
+    #    '''not updated'''
+    #    result = relaxer.relax(random_cell,**kws)
+    #        [np.linalg.norm(x) for x in result['trajectory'].forces[-1]]
+    #    fmax = np.max(
+    #        )
+    #    final_energy = result['trajectory'].energies[-1]
+    #    final_structure = result['final_structure']
+    #    return({
+    #        'final_structure':final_structure,
+    #        'final_energy':final_energy,
+    #        'max_force':fmax
+    #    })
     
     def gen_and_relax_mp(self,i_chunk,chunk,relaxer,directory,steps,out_q=None):
         _data = {}
@@ -307,21 +311,17 @@ class PredictStructure:
         random_atoms = self.generate_random_cells(num_cells=num_seeds) # add kws
         
         run = 0
-        if self.nprocs > 1:
-            print('run-{}'.format(run),end=' ')
-            start = dt.now()
-            data = self._mp_function(run,random_atoms,chgnetrelaxer,steps=steps,dls=dls,)
-            end = dt.now()
-            total = end - start
-        else:
-            data = {}
-            start = dt.now()
-            for i,random_cell in tqdm(enumerate(random_atoms),total=num_seeds,desc='run-{}'.format(run)):
-                data[i] = self.gen_and_relax_serial(random_cell,chgnetrelaxer,dls=dls,**kws)
-            end = dt.now()
-            total = end - start
+        print('run-{}'.format(run),end=' ')
+        start = dt.now()
+        data = self._mp_function(run,random_atoms,chgnetrelaxer,steps=steps,dls=dls,)
+        total = dt.now() - start
+        
+        print(len(data))
 
         df = pd.DataFrame(data).T.sort_values(by='final_energy',ascending=True)
+        dfdict = df.to_dict()
+        dumpfn(dfdict,'test.json')
+        
         df.reset_index(inplace=True)
 
         self.data[run] = copy.deepcopy(df)
@@ -332,6 +332,7 @@ class PredictStructure:
         # this doesn't seem to work...
         dfdict = df.to_dict()
         dumpfn(dfdict,'test.json')
+
         print('energy: {:.2F},fmax: {:.2F},time: {}s'.format(
             self.energies[-1],
             self.max_forces[-1],
