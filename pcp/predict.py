@@ -331,7 +331,7 @@ class PredictStructure:
         self.seed.write('{}/run_{}.vasp'.format(dir,run))
         # this doesn't seem to work...
         dfdict = df.to_dict()
-        dumpfn('test.json',dfdict)
+        dumpfn(dfdict,'test.json')
         print('energy: {:.2F},fmax: {:.2F},time: {}s'.format(
             self.energies[-1],
             self.max_forces[-1],
