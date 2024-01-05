@@ -321,6 +321,7 @@ class PredictStructure:
                 data[i] = self.gen_and_relax_serial(random_cell,chgnetrelaxer,dls=dls,**kws)
             end = dt.now()
             total = end - start
+
         df = pd.DataFrame(data).T.sort_values(by='final_energy',ascending=True)
         df.reset_index(inplace=True)
 
@@ -329,7 +330,8 @@ class PredictStructure:
         self.max_forces.append(df.T[0]['max_force'])
         self.seed = AseAtomsAdaptor().get_atoms(df.T[0]['final_structure'])
         self.seed.write('{}/run_{}.vasp'.format(dir,run))
-    
+        # this doesn't seem to work...
+        print(df.T)
         print('energy: {:.2F},fmax: {:.2F},time: {}s'.format(
             self.energies[-1],
             self.max_forces[-1],
