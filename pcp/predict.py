@@ -221,6 +221,8 @@ class PredictStructure:
                 write('{}/input.vasp'.format(destination),c,vasp5=True,sort=True)
                 #logfile = open(sys.stdout.fileno(),'wb',0)
                 sys.stdout = io.TextIOWrapper(open(os.path.join(destination,'out.log'),'wb',0),write_through=True) #logging the output 
+                print(self.airrs_input_file)
+                print('\n---\n')
                 result = relaxer.relax(c,steps=steps,verbose=True)
                 fmax = np.max(
                     [np.linalg.norm(x) for x in result['trajectory'].forces[-1]]
