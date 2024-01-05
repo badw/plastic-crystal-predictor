@@ -298,7 +298,7 @@ class PredictStructure:
         self.energy_convergence = energy_convergence
         self.create_initial_separations() # needs kws
         self.generate_airss_input() # needs more options
-        print('\nGeneration {}:'.format(run),end=' ')
+        print('\nGeneration {}:'.format(run))
         random_atoms = self.generate_random_cells(num_cells=num_seeds) # add kws
         
         start = dt.now()
@@ -330,7 +330,7 @@ class PredictStructure:
         convergence = 0
         while convergence == 0: # perhaps this should be a function
             run+=1
-            print('\nGeneration {}:'.format(run),end=' ')
+            print('\nGeneration {}:'.format(run))
 
             data = {}
             self.create_initial_separations_from_seed(self.seed)
