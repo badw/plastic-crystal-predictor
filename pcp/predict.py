@@ -292,13 +292,15 @@ class PredictStructure:
         
         chgnetrelaxer = StructOptimizer(optimizer_class=optimizer_class,use_device=self.use_device)
         #initially
+
+        run = 0 # should rename to "generation"
+
         self.energy_convergence = energy_convergence
         self.create_initial_separations() # needs kws
         self.generate_airss_input() # needs more options
         print('\nGeneration {}:'.format(run),end=' ')
         random_atoms = self.generate_random_cells(num_cells=num_seeds) # add kws
         
-        run = 0
         start = dt.now()
         data = self._mp_function(run,random_atoms,chgnetrelaxer,steps=steps,dls=dls,)
         total = dt.now() - start
