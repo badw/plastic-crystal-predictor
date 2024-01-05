@@ -151,15 +151,15 @@ class PredictStructure:
         for combination in combinations:
             a1,a2 = combination
             try:
-                dict_of_separations['{}-{}'.format(a1,a2)] = int(np.min(
+                dict_of_separations['{}-{}'.format(a1,a2)] = np.min(
                     analysis.get_values(
                         analysis.get_bonds(a1,a2,unique=True)
                         )
-                        ))
+                        )
 
             except:
                 dict_of_separations['{}-{}'.format(a1,a2)]  = self.min_sep
-        self.dict_of_separations = {k:v for k,v in dict_of_separations.items() if not v == None}
+        self.dict_of_separations = {k:int(v) for k,v in dict_of_separations.items() if not v == None}
 
     def generate_airss_input(self,
                              targvol = None,
