@@ -331,7 +331,7 @@ class PredictStructure:
         self.seed = AseAtomsAdaptor().get_atoms(df.T[0]['final_structure'])
         self.seed.write('{}/run_{}.vasp'.format(dir,run))
         # this doesn't seem to work...
-        print(df.T)
+        df.to_json('testdf.json')
         print('energy: {:.2F},fmax: {:.2F},time: {}s'.format(
             self.energies[-1],
             self.max_forces[-1],
