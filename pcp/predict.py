@@ -151,11 +151,11 @@ class PredictStructure:
         for combination in combinations:
             a1,a2 = combination
             try:
-                dict_of_separations['{}-{}'.format(a1,a2)] = np.min(
+                dict_of_separations['{}-{}'.format(a1,a2)] = int(np.min(
                     analysis.get_values(
                         analysis.get_bonds(a1,a2,unique=True)
                         )
-                        )
+                        ))
 
             except:
                 dict_of_separations['{}-{}'.format(a1,a2)]  = self.min_sep
