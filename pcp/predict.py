@@ -127,7 +127,7 @@ class PredictStructure:
                     if a1 == a2:
                         dict_of_separations['{}-{}'.format(a1,a2)]  = self.min_sep*2
                     else:
-                        dict_of_separations['{}-{}'.format(a1,a2)]  = self.min_sep
+                        dict_of_separations['{}-{}'.format(a1,a2)]  = self.min_sep*2
 
         missing = it.chain.from_iterable(elems)
         combinations = list(it.combinations_with_replacement(missing,2))
@@ -137,7 +137,7 @@ class PredictStructure:
             if not '{}-{}'.format(a1,a2) in existing:
                 dict_of_separations['{}-{}'.format(a1,a2)] = self.init_sep_val
         
-        self.dict_of_separations = {k:v for k,v in dict_of_separations.items() if not v == None}
+        self.dict_of_separations = {k:int(v) for k,v in dict_of_separations.items() if not v == None}
 
     def create_initial_separations_from_seed(self,seed): # this needs changing
         '''seed must be Atoms object'''
