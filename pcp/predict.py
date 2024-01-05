@@ -414,4 +414,4 @@ class PredictStructure:
         ax3.set_ylabel('convergence (arb.units)')
         [ax.set_xlabel('run') for ax in [ax1,ax2,ax3]]
         plt.tight_layout()
-        plt.show()    
+        plt.savefig('test.pdf')    
