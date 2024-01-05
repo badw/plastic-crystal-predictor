@@ -202,26 +202,13 @@ class PredictStructure:
             random_cells = None
             print(' -> unable to build random atoms from seed.')
         return(random_cells)
-
-    #def gen_and_relax_serial(self,random_cell,relaxer,dls=False,**kws):
-    #    '''not updated'''
-    #    result = relaxer.relax(random_cell,**kws)
-    #        [np.linalg.norm(x) for x in result['trajectory'].forces[-1]]
-    #    fmax = np.max(
-    #        )
-    #    final_energy = result['trajectory'].energies[-1]
-    #    final_structure = result['final_structure']
-    #    return({
-    #        'final_structure':final_structure,
-    #        'final_energy':final_energy,
-    #        'max_force':fmax
-    #    })
     
     def gen_and_relax_mp(self,i_chunk,chunk,relaxer,directory,steps,out_q=None):
         _data = {}
         for i,c in enumerate(chunk):
             #i+=1
-            destination = os.path.join('.',directory,'structure-{}'.format(i_chunk+i+len(chunk)*i_chunk))
+            structure_number = i_chunk+i+len(chunk)*i_chunk
+            destination = os.path.join('.',directory,'structure-{}'.format(structure_number))
             os.makedirs(destination,exist_ok=True)
             try:
                 write('{}/input.vasp'.format(destination),c,vasp5=True,sort=True)
@@ -237,7 +224,7 @@ class PredictStructure:
                 final_structure = result['final_structure']
                 final_structure.sort()
                 final_structure.to(filename='{}/output.vasp'.format(destination),fmt='poscar')
-                _data[i] = {
+                _data[structure_number] = {
                     'final_structure':final_structure,
                     'final_energy':final_energy,
                     'max_force':fmax}
@@ -251,7 +238,6 @@ class PredictStructure:
         data_chunks = [random_cells[chunksize*i:chunksize*(i+1)]
                             for i in range(self.nprocs)
                             for chunksize in [int(math.ceil(len(random_cells)/float(self.nprocs)))]]
-        
         
         manager = pmp.Manager()
         out_queue = manager.Queue()
@@ -273,6 +259,7 @@ class PredictStructure:
 
         for proc in jobs:
             proc.join()
+        
         return(data)
         
     
@@ -311,12 +298,11 @@ class PredictStructure:
         random_atoms = self.generate_random_cells(num_cells=num_seeds) # add kws
         
         run = 0
-        print('run-{}'.format(run),end=' ')
+        print('\nGeneration {}:'.format(run),end=' ')
         start = dt.now()
         data = self._mp_function(run,random_atoms,chgnetrelaxer,steps=steps,dls=dls,)
         total = dt.now() - start
         
-        print(len(data))
 
         df = pd.DataFrame(data).T.sort_values(by='final_energy',ascending=True)
         dfdict = df.to_dict()
@@ -354,18 +340,11 @@ class PredictStructure:
                 self.generate_airss_input()
                 random_atoms = self.generate_random_cells(num_cells=num_seeds)
 
-            if self.nprocs > 1:
-                print('run-{}'.format(run),end=' ')
-                start = dt.now()
-                data = self._mp_function(run,random_atoms,chgnetrelaxer,steps=steps,dls=dls)
-                end = dt.now()
-                total = end - start
-            else:
-                start = dt.now()
-                for i,random_cell in tqdm(enumerate(random_atoms),total=num_seeds,desc='run-{}'.format(run)):
-                    data[i] = self.gen_and_relax_serial(random_cell,chgnetrelaxer,dls=dls,**kws)
-                end = dt.now()
-                total = end - start
+            print('\nGeneration {}:'.format(run),end=' ')
+            start = dt.now()
+            data = self._mp_function(run,random_atoms,chgnetrelaxer,steps=steps,dls=dls)
+            total = dt.now() - start
+
             df = pd.DataFrame(data).T.sort_values(by='final_energy',ascending=True)
             df.reset_index(inplace=True)
 
