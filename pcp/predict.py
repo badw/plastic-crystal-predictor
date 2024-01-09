@@ -122,6 +122,7 @@ class PredictStructure:
                 dict_of_separations['{}-{}'.format(a1,a2)]  = None #lowest_distance
 
         self.dict_of_separations = {k:float("{:.2f}".format(v)) for k,v in dict_of_separations.items() if not v == None}
+    
     def create_initial_separations_from_seed_new(self,seed):
         all_distances = seed.get_all_distances()
         
@@ -141,10 +142,11 @@ class PredictStructure:
             a1_ind = element_indices[a1] 
             a2_ind = element_indices[a2]
             products = it.product(a1_ind,a2_ind)
-            dict_of_separations['{}-{}'.format(a1,a2)] = [float("{:.2f}".format(np.min(all_distances[x[0]][x[1]]))) 
-                                                             for x in products 
-                                                             if not all_distances[x[0]][x[1]] == 0]
+            dict_of_separations['{}-{}'.format(a1,a2)] = float("{:.2f}".format(np.min([all_distances[x[0]][x[1]] 
+                                                                                       for x in products 
+                                                                                       if not all_distances[x[0]][x[1]] == 0])))
         self.dict_of_separations = dict_of_separations
+
     def generate_airss_input(self,
                              targvol = None,
                              system = None,
