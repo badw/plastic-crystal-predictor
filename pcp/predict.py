@@ -342,9 +342,9 @@ class PredictStructure:
             self.generate_airss_input() # need to have some kws
             print(self.airrs_input_file)
             random_atoms = self.generate_random_cells(num_cells=num_seeds) # add kws
-            if random_atoms == None:
-                self.generate_airss_input()
-                random_atoms = self.generate_random_cells(num_cells=num_seeds)
+            #if random_atoms == None:
+            #    self.generate_airss_input()
+            #    random_atoms = self.generate_random_cells(num_cells=num_seeds)
 
             start = dt.now()
             data = self._mp_function(run,random_atoms,chgnetrelaxer,steps=steps,dls=dls)
