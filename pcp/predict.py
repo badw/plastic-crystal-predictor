@@ -161,7 +161,7 @@ class PredictStructure:
                         )
 
             except:
-                dict_of_separations['{}-{}'.format(a1,a2)]  = lowest_distance
+                dict_of_separations['{}-{}'.format(a1,a2)]  = None #lowest_distance
         self.dict_of_separations = {k:float("{:.2f}".format(v)) for k,v in dict_of_separations.items() if not v == None}
 
     def generate_airss_input(self,
