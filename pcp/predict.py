@@ -319,6 +319,7 @@ class PredictStructure:
             data = {}
             #self.create_initial_separations_from_seed(self.seed)
             self.create_initial_separations_from_seed_new(self.seed)
+            print(self.dict_of_separations)
             self.num_units = 1 # to avoid exponentially increasing the structure
             self.generate_airss_input() # need to have some kws
             random_atoms = self.generate_random_cells(num_cells=num_seeds) # add kws
