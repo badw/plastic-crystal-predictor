@@ -144,6 +144,7 @@ class PredictStructure:
     def create_initial_separations_from_seed(self,seed): # this needs changing
         '''seed must be Atoms object'''
         
+        lowest_distance = np.min(seed.get_cell_lengths_and_angles()[0:3])
         self.elems = list(
             dict.fromkeys(seed.get_chemical_symbols())
             )
@@ -160,7 +161,7 @@ class PredictStructure:
                         )
 
             except:
-                dict_of_separations['{}-{}'.format(a1,a2)]  = self.min_sep
+                dict_of_separations['{}-{}'.format(a1,a2)]  = self.lowest_distance
         self.dict_of_separations = {k:float("{:.2f}".format(v)) for k,v in dict_of_separations.items() if not v == None}
 
     def generate_airss_input(self,
