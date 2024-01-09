@@ -97,54 +97,12 @@ class PredictStructure:
             self.initial_seed = initial_seed[0]
             self.seed = copy.deepcopy(self.initial_seed)
 
-    def create_initial_separations(self):
-        ''' this is to be run before you start any simulations
-        as we superimpose the molecules on each other in the cell this can give us strange intermolecular distances so we estimate
-        '''
-        elems = []
-        for x in self.molecular_units:
-            elems.append(
-                list(
-                    dict.fromkeys(x.get_chemical_symbols())
-                    )
-                    )
-        self.elems = elems
-        # for the elements within a molecule we can easily define this
-        dict_of_separations = {}
-        for i,elem_list in enumerate(elems):
-            combinations = list(it.combinations_with_replacement(elem_list,2))
-            analysis = Analysis(self.molecular_units[i])
-            for combination in combinations:
-                a1,a2 = combination
-                try:
-                    dict_of_separations['{}-{}'.format(a1,a2)] = np.min(
-                        analysis.get_values(
-                            analysis.get_bonds(a1,a2,unique=True)
-                            )
-                            )
-
-                except:
-                    if a1 == a2:
-                        dict_of_separations['{}-{}'.format(a1,a2)]  = self.min_sep*2
-                    else:
-                        dict_of_separations['{}-{}'.format(a1,a2)]  = self.min_sep
-
-        missing = it.chain.from_iterable(elems)
-        combinations = list(it.combinations_with_replacement(missing,2))
-        existing = list(dict_of_separations)
-        for combination in combinations:
-            a1,a2 = combination
-            if not '{}-{}'.format(a1,a2) in existing:
-                dict_of_separations['{}-{}'.format(a1,a2)] = self.init_sep_val
-        
-        #self.dict_of_separations = {k:float("{:.2f}".format(v)) for k,v in dict_of_separations.items() if not v == None}
-        self.dict_of_separations = {k:self.min_sep for k,v in dict_of_separations.items() if not v == None} # temp.
-
 
     def create_initial_separations_from_seed(self,seed): # this needs changing
         '''seed must be Atoms object'''
         
-        lowest_distance = np.min(seed.get_cell_lengths_and_angles()[0:3]) - 0.1
+        # lowest_distance = np.min(seed.get_cell_lengths_and_angles()[0:3])
+
         self.elems = list(
             dict.fromkeys(seed.get_chemical_symbols())
             )
@@ -162,6 +120,7 @@ class PredictStructure:
 
             except:
                 dict_of_separations['{}-{}'.format(a1,a2)]  = None #lowest_distance
+
         self.dict_of_separations = {k:float("{:.2f}".format(v)) for k,v in dict_of_separations.items() if not v == None}
 
     def generate_airss_input(self,
@@ -300,7 +259,6 @@ class PredictStructure:
         run = 0 # should rename to "generation"
 
         self.energy_convergence = energy_convergence
-        #self.create_initial_separations() # needs kws
         self.generate_airss_input() # needs more options
         print('\nGeneration {}:'.format(run))
         random_atoms = self.generate_random_cells(num_cells=num_seeds) # add kws
@@ -340,11 +298,7 @@ class PredictStructure:
             self.create_initial_separations_from_seed(self.seed)
             self.num_units = 1 # to avoid exponentially increasing the structure
             self.generate_airss_input() # need to have some kws
-            print(self.airrs_input_file)
             random_atoms = self.generate_random_cells(num_cells=num_seeds) # add kws
-            #if random_atoms == None:
-            #    self.generate_airss_input()
-            #    random_atoms = self.generate_random_cells(num_cells=num_seeds)
 
             start = dt.now()
             data = self._mp_function(run,random_atoms,chgnetrelaxer,steps=steps,dls=dls)
