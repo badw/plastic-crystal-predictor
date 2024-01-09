@@ -40,3 +40,28 @@
         
         #self.dict_of_separations = {k:float("{:.2f}".format(v)) for k,v in dict_of_separations.items() if not v == None}
         self.dict_of_separations = {k:self.min_sep for k,v in dict_of_separations.items() if not v == None} # temp.
+
+
+    def create_initial_separations_from_seed_new(self,seed):
+        all_distances = seed.get_all_distances()
+        
+        self.elems = list(
+                    dict.fromkeys(seed.get_chemical_symbols())
+                    )
+        
+        element_indices = {}
+        for e in self.elems:
+            element_indices[e] = [i for i,x in enumerate(seed) if x.symbol == e] 
+        
+        combinations = list(it.combinations_with_replacement(self.elems,2))
+        
+        dict_of_separations = {}
+        for combination in combinations:
+            a1,a2 = combination
+            a1_ind = element_indices[a1] 
+            a2_ind = element_indices[a2]
+            products = it.product(a1_ind,a2_ind)
+            dict_of_separations['{}-{}'.format(a1,a2)] = float("{:.2f}".format(np.min([all_distances[x[0]][x[1]] 
+                                                                                       for x in products 
+                                                                                       if not all_distances[x[0]][x[1]] == 0])))
+        self.dict_of_separations = dict_of_separations
