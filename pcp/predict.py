@@ -161,7 +161,7 @@ class PredictStructure:
                         )
 
             except:
-                dict_of_separations['{}-{}'.format(a1,a2)]  = self.lowest_distance
+                dict_of_separations['{}-{}'.format(a1,a2)]  = lowest_distance
         self.dict_of_separations = {k:float("{:.2f}".format(v)) for k,v in dict_of_separations.items() if not v == None}
 
     def generate_airss_input(self,
@@ -173,7 +173,10 @@ class PredictStructure:
         '''
 
         self.seed = SeedAtoms(self.seed)
-        self.seed.gentags.minsep = [self.min_sep,self.dict_of_separations]
+        try:
+            self.seed.gentags.minsep = [self.min_sep,self.dict_of_separations]
+        except:
+            self.seed.gentags.minsep = self.min_sep
         self.seed.gentags.targvol = targvol
         self.seed.gentags.system = system
         # need to add more gentags
@@ -297,7 +300,7 @@ class PredictStructure:
         run = 0 # should rename to "generation"
 
         self.energy_convergence = energy_convergence
-        self.create_initial_separations() # needs kws
+        #self.create_initial_separations() # needs kws
         self.generate_airss_input() # needs more options
         print('\nGeneration {}:'.format(run))
         random_atoms = self.generate_random_cells(num_cells=num_seeds) # add kws
