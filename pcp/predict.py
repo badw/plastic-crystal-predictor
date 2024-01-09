@@ -300,7 +300,7 @@ class PredictStructure:
         run = 0 # should rename to "generation"
 
         self.energy_convergence = energy_convergence
-        self.create_initial_separations() # needs kws
+        #self.create_initial_separations() # needs kws
         self.generate_airss_input() # needs more options
         print('\nGeneration {}:'.format(run))
         random_atoms = self.generate_random_cells(num_cells=num_seeds) # add kws
@@ -338,6 +338,7 @@ class PredictStructure:
 
             data = {}
             self.create_initial_separations_from_seed(self.seed)
+            print(self.dict_of_separations)
             self.num_units = 1 # to avoid exponentially increasing the structure
             self.generate_airss_input() # need to have some kws
             random_atoms = self.generate_random_cells(num_cells=num_seeds) # add kws
