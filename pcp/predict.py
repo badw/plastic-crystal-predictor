@@ -316,7 +316,7 @@ class PredictStructure:
         self.data[run] = copy.deepcopy(df)
         self.energies.append(df.T[0]['final_energy'])
         self.max_forces.append(df.T[0]['max_force'])
-        self.seed = AseAtomsAdaptor().get_atoms(df.T[0]['final_structure'])
+        self.seed = SeedAtoms(AseAtomsAdaptor().get_atoms(df.T[0]['final_structure']))
         self.seed.write('{}/run_{}.vasp'.format(dir,run))
 
         print('''   -> victor:  structure-{}, 
@@ -338,9 +338,7 @@ class PredictStructure:
 
             data = {}
             self.create_initial_separations_from_seed(self.seed)
-            self.min_sep = None
             self.num_units = 1 # to avoid exponentially increasing the structure
-            print(self.dict_of_separations)
             self.generate_airss_input() # need to have some kws
             print(self.airrs_input_file)
             random_atoms = self.generate_random_cells(num_cells=num_seeds) # add kws
