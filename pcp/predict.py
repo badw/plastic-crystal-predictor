@@ -345,7 +345,6 @@ class PredictStructure:
             print(self.airrs_input_file)
             random_atoms = self.generate_random_cells(num_cells=num_seeds) # add kws
             if random_atoms == None:
-                self.create_initial_separations()
                 self.generate_airss_input()
                 random_atoms = self.generate_random_cells(num_cells=num_seeds)
 
