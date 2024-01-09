@@ -122,7 +122,29 @@ class PredictStructure:
                 dict_of_separations['{}-{}'.format(a1,a2)]  = None #lowest_distance
 
         self.dict_of_separations = {k:float("{:.2f}".format(v)) for k,v in dict_of_separations.items() if not v == None}
-
+    def create_initial_separations_from_seed_new(self,seed):
+        all_distances = seed.get_all_distances()
+        
+        self.elems = list(
+                    dict.fromkeys(seed.get_chemical_symbols())
+                    )
+        
+        element_indices = {}
+        for e in self.elems:
+            element_indices[e] = [i for i,x in enumerate(seed) if x.symbol == e] 
+        
+        combinations = list(it.combinations_with_replacement(self.elems,2))
+        
+        dict_of_separations = {}
+        for combination in combinations:
+            a1,a2 = combination
+            a1_ind = element_indices[a1] 
+            a2_ind = element_indices[a2]
+            products = it.product(a1_ind,a2_ind)
+            dict_of_separations['{}-{}'.format(a1,a2)] = [float("{:.2f}".format(np.min(all_distances[x[0]][x[1]]))) 
+                                                             for x in products 
+                                                             if not all_distances[x[0]][x[1]] == 0]
+        self.dict_of_separations = dict_of_separations
     def generate_airss_input(self,
                              targvol = None,
                              system = None,
@@ -295,7 +317,8 @@ class PredictStructure:
             print('\nGeneration {}:'.format(run))
 
             data = {}
-            self.create_initial_separations_from_seed(self.seed)
+            #self.create_initial_separations_from_seed(self.seed)
+            self.create_initial_separations_from_seed_new(self.seed)
             self.num_units = 1 # to avoid exponentially increasing the structure
             self.generate_airss_input() # need to have some kws
             random_atoms = self.generate_random_cells(num_cells=num_seeds) # add kws
