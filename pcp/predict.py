@@ -144,7 +144,7 @@ class PredictStructure:
     def create_initial_separations_from_seed(self,seed): # this needs changing
         '''seed must be Atoms object'''
         
-        lowest_distance = np.min(seed.get_cell_lengths_and_angles()[0:3])
+        lowest_distance = np.min(seed.get_cell_lengths_and_angles()[0:3]) - 0.1
         self.elems = list(
             dict.fromkeys(seed.get_chemical_symbols())
             )
