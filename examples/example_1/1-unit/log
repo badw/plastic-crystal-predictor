@@ -1,0 +1,41 @@
+CHGNet v0.3.0 initialized with 412,525 parameters
+CHGNet will run on cpu
+
+Generation 0:
+   -> victor:  structure-76, 
+              energy: -244.01,
+              fmax: 0.09,
+              time: 2526.487123s
+
+Generation 1:
+{'Fe-Cl': 2.23, 'H-C': 1.09, 'C-C': 1.52, 'C-N': 1.52}
+   -> victor:  structure-92, 
+                      energy: -244.05,
+                      fmax: 0.07,
+                      time: 1464.31s
+
+Generation 2:
+{'Fe-Cl': 2.23, 'H-C': 1.1, 'C-C': 1.52, 'C-N': 1.52}
+   -> victor:  structure-89, 
+                      energy: -244.08,
+                      fmax: 0.10,
+                      time: 1308.85s
+
+Generation 3:
+{'Fe-Cl': 2.22, 'H-C': 1.09, 'C-C': 1.52, 'C-N': 1.52}
+warning: lower energy seed was found previously - restarting from that
+   -> victor:  structure-72, 
+                      energy: -243.97,
+                      convergence:0.04 
+                      fmax: 0.10,
+                      time: 1417.32s
+
+Generation 4:
+{'Fe-Cl': 2.22, 'H-C': 1.09, 'C-C': 1.52, 'C-N': 1.52}
+warning: lower energy seed was found previously - restarting from that
+   -> victor:  structure-34, 
+                      energy: -244.05,
+                      convergence:0.01 
+                      fmax: 0.10,
+                      time: 1410.73s
+time took: 9449.041794 seconds

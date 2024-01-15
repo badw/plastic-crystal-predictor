@@ -179,7 +179,7 @@ class PredictStructure:
                 sys.stdout = io.TextIOWrapper(open(os.path.join(destination,'out.log'),'wb',0),write_through=True) #logging the output 
                 print(self.airrs_input_file)
                 print('\n---\n')
-                result = relaxer.relax(c,steps=steps,verbose=True)
+                result = relaxer.relax(c,steps=steps,fmax=self.energy_convergence,verbose=True)
                 fmax = np.max(
                     [np.linalg.norm(x) for x in result['trajectory'].forces[-1]]
                     )
