@@ -163,7 +163,7 @@ class PredictStructure:
                                                                               bar_format='{l_bar}{bar:10}{r_bar}')]
         except:
             random_cells = None
-            print(' -> unable to build random atoms from seed.')
+            print(' -> unable to build random atoms from seed. Removed separations...')
         return(random_cells)
     
     def gen_and_relax_mp(self,i_chunk,chunk,relaxer,directory,steps,out_q=None):
@@ -296,11 +296,16 @@ class PredictStructure:
 
             data = {}
             self.create_initial_separations_from_seed(self.seed)
-            print(self.dict_of_separations)
             self.num_units = 1 # to avoid exponentially increasing the structure
             self.generate_airss_input() # need to have some kws
             random_atoms = self.generate_random_cells(num_cells=num_seeds) # add kws
-
+            if random_atoms == None:
+                self.dict_of_separations = None
+                self.generate_airss_input()
+                random_atoms = self.generate_random_cells(num_cells=num_seeds)
+                if random_atoms == None:
+                    print('building random atoms failed.\n.....exiting...')
+                    convergence = 1
             start = dt.now()
             data = self._mp_function(run,random_atoms,chgnetrelaxer,steps=steps,dls=dls)
             total = dt.now() - start
