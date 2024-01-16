@@ -127,6 +127,7 @@ class PredictStructure:
     def generate_airss_input(self,
                              targvol = None,
                              system = None,
+                             no_sep=False,
                              ): # add some more
         '''
         this generates a SeedAtoms atoms object which can then be used to generate random configurations
@@ -134,7 +135,10 @@ class PredictStructure:
 
         self.seed = SeedAtoms(self.seed)
         try:
-            self.seed.gentags.minsep = [self.min_sep,self.dict_of_separations]
+            if not no_sep == True:
+                self.seed.gentags.minsep = [self.min_sep,self.dict_of_separations]
+            else:
+                self.seed.gentags.minsep = self.min_sep
         except:
             self.seed.gentags.minsep = self.min_sep
         self.seed.gentags.targvol = targvol
@@ -300,8 +304,9 @@ class PredictStructure:
             self.generate_airss_input() # need to have some kws
             random_atoms = self.generate_random_cells(num_cells=num_seeds) # add kws
             if random_atoms == None:
+                print('random atom generator failed...\n...continuing without individual separations')
                 self.dict_of_separations = None
-                self.generate_airss_input()
+                self.generate_airss_input(no_sep=True)
                 random_atoms = self.generate_random_cells(num_cells=num_seeds)
                 if random_atoms == None:
                     print('building random atoms failed.\n.....exiting...')
