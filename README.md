@@ -4,3 +4,6 @@ Uses chgnet (https://github.com/CederGroupHub/chgnet) and airsspy (https://githu
 work in progress
 still a bit rough... 
 
+
+this is somewhat particle swarm meets airss
+
